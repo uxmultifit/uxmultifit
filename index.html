@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UX MULTIFIT — Dashboard de Vendas</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root {
+  --brand: #2D1DBB;
+  --brand-mid: #4A3CC7;
+  --brand-light: #F2F1FB;
+  --brand-border: #D6D3F5;
+  --text: #222222;
+  --muted: #6B6B8A;
+  --card: #FFFFFF;
+  --border: #E5E4F0;
+  --green: #16A34A;
+  --green-bg: #DCFCE7;
+  --amber: #D97706;
+  --amber-bg: #FEF3C7;
+  --red: #DC2626;
+  --red-bg: #FEE2E2;
+  --gold: #CA8A04;
+  --silver: #6B7280;
+  --bronze: #B45309;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--brand-light);
+  color: var(--text);
+  font-size: 15px;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--brand);
+  color: #fff;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo { font-size: 22px; font-weight: 900; letter-spacing: 0.06em; white-space: nowrap; }
+.header-sub { font-size: 12px; opacity: 0.65; flex: 1; }
+.header-clock { font-size: 16px; font-weight: 700; opacity: 0.9; white-space: nowrap; }
+.header-refresh {
+  font-size: 11px; opacity: 0.65;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+}
+.refresh-bar-track {
+  width: 80px; height: 3px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.refresh-bar-fill {
+  height: 100%;
+  background: rgba(255,255,255,0.7);
+  border-radius: 99px;
+  transition: width 1s linear;
+}
+
+.month-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 6px 14px;
+}
+.month-selector label { font-size: 11px; opacity: 0.75; }
+.month-selector select {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+.month-selector select option { color: var(--text); background: #fff; }
+
+/* ── MAIN ── */
+main { padding: 20px 28px 48px; max-width: 1600px; margin: 0 auto; }
+
+/* ── LOADING ── */
+#loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 60vh; gap: 16px;
+}
+.spinner {
+  width: 44px; height: 44px;
+  border: 3px solid var(--brand-border);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading p { color: var(--muted); }
+
+/* ── ERROR ── */
+#error-bar {
+  background: var(--red-bg); color: var(--red);
+  border-radius: 10px; padding: 12px 18px;
+  margin-bottom: 16px; font-size: 13px;
+  display: none;
+}
+
+/* ── CARDS ── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.card-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  color: var(--muted); margin-bottom: 8px;
+}
+.card-value {
+  font-size: 30px; font-weight: 900;
+  color: var(--text); line-height: 1; margin-bottom: 6px;
+}
+.card-value.brand { color: var(--brand); }
+.card-sub { font-size: 11px; color: var(--muted); }
+.nivel-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 15px; font-weight: 800; margin-bottom: 6px;
+}
+.nivel-none { background: #F3F4F6; color: var(--silver); }
+.nivel-bronze { background: #FEF3C7; color: var(--bronze); }
+.nivel-prata { background: #F3F4F6; color: var(--silver); }
+.nivel-ouro { background: #FFFBEB; color: var(--gold); }
+
+/* ── PROGRESS ── */
+.progress-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 18px 24px;
+  border: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+.progress-top {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 12px;
+}
+.progress-top-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.progress-detail { font-size: 12px; color: var(--muted); }
+.prog-track {
+  height: 12px; background: var(--brand-light);
+  border-radius: 99px; overflow: hidden; margin-bottom: 8px;
+  position: relative;
+}
+.prog-fill {
+  height: 100%; background: var(--brand);
+  border-radius: 99px; transition: width 1s ease;
+}
+/* milestone markers */
+.prog-markers { position: relative; height: 0; }
+.prog-marker {
+  position: absolute; top: -20px;
+  width: 2px; background: var(--brand-border);
+  height: 12px; transform: translateX(-50%);
+}
+.prog-milestones {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--muted);
+}
+.prog-milestone { display: flex; align-items: center; gap: 4px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* ── CHARTS ROW ── */
+.charts-row {
+  display: grid; gap: 16px; margin-bottom: 18px;
+}
+.charts-3 { grid-template-columns: 1fr 1fr 1fr; }
+.chart-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+}
+.chart-card h3 {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); margin-bottom: 14px;
+}
+.chart-wrap { position: relative; height: 220px; }
+
+/* ── RANKING ── */
+.ranking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.rank-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+}
+.rank-pos {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 900; flex-shrink: 0;
+}
+.rp1 { background: #FFFBEB; color: var(--gold); }
+.rp2 { background: #F3F4F6; color: var(--silver); }
+.rp3 { background: #FEF3C7; color: var(--bronze); }
+.rpn { background: var(--brand-light); color: var(--brand); }
+.rank-info { flex: 1; }
+.rank-name { font-size: 15px; font-weight: 800; }
+.rank-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.rank-pts { font-size: 28px; font-weight: 900; color: var(--brand); line-height: 1; }
+.rank-pts-label { font-size: 10px; color: var(--muted); }
+
+/* ── TABLE ── */
+.table-card {
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.table-top {
+  padding: 14px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.table-top h3 {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+}
+.table-count {
+  font-size: 11px; font-weight: 700;
+  background: var(--brand-light); color: var(--brand);
+  padding: 3px 10px; border-radius: 20px;
+}
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1700px; }
+thead th {
+  background: var(--brand-light);
+  color: var(--brand);
+  font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 9px 10px; text-align: left;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--brand-border);
+}
+tbody tr { border-bottom: 1px solid var(--border); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #FAFAFE; }
+tbody td { padding: 8px 10px; vertical-align: middle; white-space: nowrap; }
+
+.sbadge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.s-conf { background: var(--green-bg); color: var(--green); }
+.s-risco { background: var(--amber-bg); color: var(--amber); }
+.s-canc { background: var(--red-bg); color: var(--red); }
+.sit-badge { background: var(--brand-light); color: var(--brand); padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 600; display: inline-block; }
+.pag-cred { background: #EFF6FF; color: #1D4ED8; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 600; display: inline-block; }
+.pag-rec { background: #F0FDF4; color: #15803D; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 600; display: inline-block; }
+.chk-y { color: var(--green); font-size: 14px; }
+.chk-n { color: #D1D5DB; font-size: 14px; }
+.pts { background: var(--brand-light); color: var(--brand); font-weight: 700; padding: 1px 7px; border-radius: 20px; font-size: 11px; display: inline-block; }
+
+.empty {
+  text-align: center; padding: 60px;
+  color: var(--muted); font-size: 14px;
+}
+
+.section-title {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  color: var(--muted); margin: 20px 0 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">UX MULTIFIT</div>
+  <div class="header-sub">Controle de Vendas · Comissão · Pontos — 2º Semestre 2026</div>
+
+  <div class="month-selector">
+    <label>Mês</label>
+    <select id="monthSel">
+      <option value="julho">Julho 2026</option>
+      <option value="agosto">Agosto 2026</option>
+      <option value="setembro">Setembro 2026</option>
+      <option value="outubro">Outubro 2026</option>
+      <option value="novembro">Novembro 2026</option>
+      <option value="dezembro">Dezembro 2026</option>
+    </select>
+  </div>
+
+  <div class="header-clock" id="clock">--:--</div>
+
+  <div class="header-refresh">
+    <span id="refresh-label">Atualiza em 5:00</span>
+    <div class="refresh-bar-track">
+      <div class="refresh-bar-fill" id="refresh-bar" style="width:100%"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="loading"><div class="spinner"></div><p>Carregando dados da planilha…</p></div>
+  <div id="error-bar"></div>
+
+  <div id="content" style="display:none">
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-label">Total Vendido</div>
+        <div class="card-value brand" id="c-vendido">R$ 0</div>
+        <div class="card-sub" id="c-vendido-sub">0 vendas confirmadas</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Total Recebido</div>
+        <div class="card-value" id="c-recebido">R$ 0</div>
+        <div class="card-sub" id="c-recebido-sub">Crédito R$0 · Recorrente R$0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Comissão do Mês</div>
+        <div class="card-value" id="c-comissao">R$ 0</div>
+        <div class="card-sub" id="c-comissao-sub">Cred —% · Rec —%</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Nível Atingido</div>
+        <div id="c-nivel" class="nivel-badge nivel-none">○ Não batida</div>
+        <div class="card-sub" id="c-nivel-sub">—</div>
+      </div>
+    </div>
+
+    <div class="progress-card">
+      <div class="progress-top">
+        <span class="progress-top-label">Progresso para a Meta</span>
+        <span class="progress-detail" id="prog-detail">R$ 0 de R$ 210.000 (Bronze)</span>
+      </div>
+      <div class="prog-track">
+        <div class="prog-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+      <div class="prog-milestones">
+        <span class="prog-milestone"><span class="dot" style="background:var(--bronze)"></span>Bronze R$ 210k</span>
+        <span class="prog-milestone"><span class="dot" style="background:var(--silver)"></span>Prata R$ 235k</span>
+        <span class="prog-milestone"><span class="dot" style="background:var(--gold)"></span>Ouro R$ 250k</span>
+      </div>
+    </div>
+
+    <div class="section-title">Análise de Vendas</div>
+    <div class="charts-row charts-3">
+      <div class="chart-card">
+        <h3>Vendas por Situação</h3>
+        <div class="chart-wrap"><canvas id="ch-sit"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Crédito — Vendido vs Recebido por Consultora</h3>
+        <div class="chart-wrap"><canvas id="ch-cred"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Recorrente — Vendido vs 1ª Mensalidade OK (%)</h3>
+        <div class="chart-wrap"><canvas id="ch-rec"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-title">Ranking de Pontos</div>
+    <div class="ranking-grid" id="ranking"></div>
+
+    <div class="section-title">Lançamentos do Mês</div>
+    <div class="table-card">
+      <div class="table-top">
+        <h3>Vendas</h3>
+        <span class="table-count" id="t-count">0 vendas</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Data</th><th>Consultora</th><th>Aluno</th><th>Plano</th><th>Duração</th>
+            <th>Valor Venda</th><th>Valor Pago</th><th>Pagamento</th><th>Situação</th><th>Status</th>
+            <th>Contrato</th><th>Pgto</th><th>Link</th><th>Cadastro</th><th>Autorização</th>
+            <th>Msg Matr.</th><th>Boas-vindas</th><th>Neg. Fin.</th><th>Desc. Tab.</th>
+            <th>Fidelidade</th><th>Férias Ext.</th><th>Pts Máx</th><th>Pts Ating.</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// ── CONFIG ──────────────────────────────────────
+const PUB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2nNPVSFUAMI-T2M1o5-Bo36lPRau5WOVsIIthitQ5p9wuRtPpyz6Z0125c42ur90TpVMYC-Go0oxJ/pub';
+const GIDS = {
+  julho:    1663599532,
+  agosto:   951464700,
+  setembro: 981665152,
+  outubro:  386799963,
+  novembro: 218651202,
+  dezembro: 212632025,
+  dashboard: 2073320822,
+  configuracoes: 467458164
+};
+const METAS = { bronze: 210000, prata: 235000, ouro: 250000 };
+// Commission by level (from Configurações sheet — these will be overridden if parseable)
+let COMISSAO = {
+  'nao-batida': { cred: 0.5,  rec: 0.3  },
+  'bronze':     { cred: 1.0,  rec: 0.5  },
+  'prata':      { cred: 1.5,  rec: 0.8  },
+  'ouro':       { cred: 2.0,  rec: 1.0  }
+};
+const CONSULTORAS = ['Barbara','Ellen','Marcélia','Consultor ADM'];
+const REFRESH_SEC = 300; // 5 minutes
+
+let charts = {};
+let refreshTimer, countdownTimer, countdownSec = REFRESH_SEC;
+
+// ── UTILS ────────────────────────────────────────
+const fmtBRL = v => v == null ? 'R$ 0,00' :
+  'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function parseBRL(s) {
+  if (!s) return 0;
+  // "1.798,80" → 1798.80  |  "1798.80" → 1798.80
+  const str = String(s).replace(/\s/g, '');
+  if (str.includes(',')) {
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  return parseFloat(str) || 0;
+}
+
+function parseBool(v) {
+  if (v == null) return false;
+  const s = String(v).toLowerCase().trim();
+  return ['sim','s','yes','true','✓','x','1'].includes(s);
+}
+
+function chk(v) {
+  return parseBool(v)
+    ? '<span class="chk-y">✓</span>'
+    : '<span class="chk-n">–</span>';
+}
+
+// ── CSV PARSER ───────────────────────────────────
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) {
+        cols.push(cur.trim()); cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    cols.push(cur.trim());
+    rows.push(cols);
+  }
+  return rows;
+}
+
+// ── FETCH CSV ────────────────────────────────────
+async function fetchCSV(gid) {
+  const url = `${PUB}?gid=${gid}&single=true&output=csv&t=${Date.now()}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.text();
+}
+
+// ── PARSE VENDAS ROWS ────────────────────────────
+// Expected columns (0-indexed):
+// 0:Data  1:Consultora  2:Nome Aluno  3:Plano  4:Duração
+// 5:Valor Venda  6:Valor Pago  7:Forma Pag  8:Situação  9:Status
+// 10:Contrato  11:Pagamento  12:Link  13:Cadastro  14:Autorização
+// 15:Msg Matrícula  16:Boas-vindas  17:Neg Fin  18:Desconto  19:Fidelidade
+// 20:Férias Ext  21:Pts Máx  22:Pts Atingida
+
+function parseVendas(rows) {
+  const vendas = [];
+  let headerIdx = -1;
+
+  // Find header row (contains "Data" and "Consultora")
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const joined = r.join('|').toLowerCase();
+    if (joined.includes('data') && joined.includes('consultora')) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  const dataRows = headerIdx >= 0 ? rows.slice(headerIdx + 1) : rows.slice(1);
+
+  for (const r of dataRows) {
+    if (!r[0] || !r[1]) continue; // skip empty rows
+    if (r[0].toLowerCase().includes('data')) continue; // skip repeated headers
+
+    vendas.push({
+      data:               r[0]  || '',
+      consultora:         r[1]  || '',
+      nomeAluno:          r[2]  || '',
+      planoVendido:       r[3]  || '',
+      duracao:            r[4]  || '',
+      valorVenda:         parseBRL(r[5]),
+      valorPago:          parseBRL(r[6]),
+      formaPagamento:     r[7]  || '',
+      situacao:           r[8]  || '',
+      status:             r[9]  || '',
+      contratoAssinado:   parseBool(r[10]),
+      pagamento:          parseBool(r[11]),
+      agendouLink:        parseBool(r[12]),
+      cadastroCompleto:   parseBool(r[13]),
+      autorizacaoCobranca:parseBool(r[14]),
+      msgMatricula:       parseBool(r[15]),
+      boasVindas:         parseBool(r[16]),
+      negFinanceira:      parseBool(r[17]),
+      descontoTabela:     parseBool(r[18]),
+      negFidelidade:      parseBool(r[19]),
+      feriasEstendidas:   parseBool(r[20]),
+      ptsMax:             parseBRL(r[21]),
+      ptsAtingida:        parseBRL(r[22]),
+    });
+  }
+  return vendas;
+}
+
+// ── TRY PARSE CONFIGURAÇÕES ───────────────────────
+function tryParseConfig(rows) {
+  // Look for rows with commission percentages
+  for (const r of rows) {
+    const joined = r.join('|').toLowerCase();
+    if (joined.includes('bronze') && r.some(c => c.includes('%'))) {
+      // Try to extract values
+      try {
+        const vals = r.filter(c => c.includes('%')).map(c => parseFloat(c.replace('%','').replace(',','.')));
+        if (vals.length >= 2) {
+          COMISSAO.bronze = { cred: vals[0], rec: vals[1] };
+        }
+      } catch(_) {}
+    }
+    if (joined.includes('prata') && r.some(c => c.includes('%'))) {
+      try {
+        const vals = r.filter(c => c.includes('%')).map(c => parseFloat(c.replace('%','').replace(',','.')));
+        if (vals.length >= 2) COMISSAO.prata = { cred: vals[0], rec: vals[1] };
+      } catch(_) {}
+    }
+    if (joined.includes('ouro') && r.some(c => c.includes('%'))) {
+      try {
+        const vals = r.filter(c => c.includes('%')).map(c => parseFloat(c.replace('%','').replace(',','.')));
+        if (vals.length >= 2) COMISSAO.ouro = { cred: vals[0], rec: vals[1] };
+      } catch(_) {}
+    }
+  }
+}
+
+// ── CALCULATE STATS ──────────────────────────────
+function calcStats(vendas) {
+  const confirmed = vendas.filter(v => v.status === 'Confirmada');
+
+  const totalVendido   = confirmed.reduce((s, v) => s + v.valorVenda, 0);
+  const totalCredito   = confirmed.filter(v => v.formaPagamento === 'Crédito').reduce((s,v)=>s+v.valorPago,0);
+  const totalRecorrente= confirmed.filter(v => v.formaPagamento === 'Recorrente').reduce((s,v)=>s+v.valorPago,0);
+
+  let nivel = 'nao-batida', nivelLabel = 'Não batida';
+  let proximoNivel = 'Bronze', proximoVal = METAS.bronze;
+  if (totalVendido >= METAS.bronze) { nivel='bronze'; nivelLabel='Bronze'; proximoNivel='Prata'; proximoVal=METAS.prata; }
+  if (totalVendido >= METAS.prata)  { nivel='prata';  nivelLabel='Prata';  proximoNivel='Ouro';  proximoVal=METAS.ouro; }
+  if (totalVendido >= METAS.ouro)   { nivel='ouro';   nivelLabel='Ouro';   proximoNivel='Ouro';  proximoVal=METAS.ouro; }
+
+  const pctCred = COMISSAO[nivel]?.cred || 0.5;
+  const pctRec  = COMISSAO[nivel]?.rec  || 0.3;
+  const comissaoTotal = (totalCredito * pctCred / 100) + (totalRecorrente * pctRec / 100);
+
+  // Per-consultant stats
+  const consultoras = [...new Set([...CONSULTORAS, ...vendas.map(v=>v.consultora).filter(Boolean)])];
+  const ranking = consultoras.map(c => {
+    const cv = confirmed.filter(v => v.consultora === c);
+    return {
+      consultora: c,
+      vendas: cv.length,
+      faturamento: cv.reduce((s,v)=>s+v.valorVenda,0),
+      pontos: cv.reduce((s,v)=>s+v.ptsAtingida,0)
+    };
+  }).filter(r => r.vendas > 0 || r.pontos > 0)
+    .sort((a,b) => b.pontos - a.pontos);
+
+  // Situações
+  const situacoes = {};
+  confirmed.forEach(v => {
+    const s = v.situacao || 'Outra';
+    situacoes[s] = (situacoes[s]||0)+1;
+  });
+
+  // Per-consultant crédito/recorrente
+  const credVendido = CONSULTORAS.map(c =>
+    confirmed.filter(v=>v.consultora===c&&v.formaPagamento==='Crédito').reduce((s,v)=>s+v.valorVenda,0)
+  );
+  const credPago = CONSULTORAS.map(c =>
+    confirmed.filter(v=>v.consultora===c&&v.formaPagamento==='Crédito').reduce((s,v)=>s+v.valorPago,0)
+  );
+  const recVendido = CONSULTORAS.map(c =>
+    confirmed.filter(v=>v.consultora===c&&v.formaPagamento==='Recorrente').reduce((s,v)=>s+v.valorVenda,0)
+  );
+  const recTot = CONSULTORAS.map(c =>
+    confirmed.filter(v=>v.consultora===c&&v.formaPagamento==='Recorrente').length
+  );
+  const recOk = CONSULTORAS.map(c =>
+    confirmed.filter(v=>v.consultora===c&&v.formaPagamento==='Recorrente'&&v.pagamento).length
+  );
+  const recPct = CONSULTORAS.map((_,i) => recTot[i]>0 ? Math.round(recOk[i]/recTot[i]*100) : 0);
+
+  return {
+    totalVendido, totalCredito, totalRecorrente,
+    nivel, nivelLabel, proximoNivel, proximoVal,
+    pctCred, pctRec, comissaoTotal,
+    ranking, situacoes,
+    credVendido, credPago,
+    recVendido, recPct,
+    confirmadosCount: confirmed.length,
+    faltaProximo: Math.max(0, proximoVal - totalVendido)
+  };
+}
+
+// ── RENDER ───────────────────────────────────────
+function renderCards(s) {
+  document.getElementById('c-vendido').textContent = fmtBRL(s.totalVendido);
+  document.getElementById('c-vendido-sub').textContent = `${s.confirmadosCount} venda(s) confirmada(s)`;
+  document.getElementById('c-recebido').textContent = fmtBRL(s.totalCredito + s.totalRecorrente);
+  document.getElementById('c-recebido-sub').textContent = `Crédito ${fmtBRL(s.totalCredito)} · Recorrente ${fmtBRL(s.totalRecorrente)}`;
+  document.getElementById('c-comissao').textContent = fmtBRL(s.comissaoTotal);
+  document.getElementById('c-comissao-sub').textContent = `Crédito ${s.pctCred}% · Recorrente ${s.pctRec}%`;
+
+  const icons = {'nao-batida':'○','bronze':'🥉','prata':'🥈','ouro':'🥇'};
+  const labels = {'nao-batida':'Não batida','bronze':'Bronze','prata':'Prata','ouro':'Ouro'};
+  const cls = {'nao-batida':'nivel-none','bronze':'nivel-bronze','prata':'nivel-prata','ouro':'nivel-ouro'};
+  const nb = document.getElementById('c-nivel');
+  nb.textContent = `${icons[s.nivel]} ${labels[s.nivel]}`;
+  nb.className = `nivel-badge ${cls[s.nivel]}`;
+  document.getElementById('c-nivel-sub').textContent =
+    s.nivel === 'ouro' ? '🏆 Meta máxima atingida!'
+    : `Falta ${fmtBRL(s.faltaProximo)} para ${s.proximoNivel}`;
+}
+
+function renderProgress(s) {
+  const pct = Math.min(100, (s.totalVendido / METAS.ouro) * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-detail').textContent =
+    `${fmtBRL(s.totalVendido)} de ${fmtBRL(s.proximoVal)} (${s.proximoNivel})`;
+}
+
+function renderCharts(s) {
+  const PC = ['#2D1DBB','#7C6FDB','#B5ADEC','#D6D3F5','#9C8FE0','#4A3CC7'];
+  const labels4 = CONSULTORAS.map(c => c.split(' ')[0]);
+
+  // Chart 1: Situação
+  const c1 = document.getElementById('ch-sit').getContext('2d');
+  if (charts.sit) charts.sit.destroy();
+  const sitKeys = Object.keys(s.situacoes);
+  charts.sit = new Chart(c1, {
+    type: 'doughnut',
+    data: {
+      labels: sitKeys.length ? sitKeys : ['Sem dados'],
+      datasets: [{ data: sitKeys.length ? Object.values(s.situacoes) : [1], backgroundColor: PC, borderWidth: 2, borderColor:'#fff' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position:'bottom', labels:{ font:{size:10}, color:'#222', boxWidth:11 } } }
+    }
+  });
+
+  // Chart 2: Crédito
+  const c2 = document.getElementById('ch-cred').getContext('2d');
+  if (charts.cred) charts.cred.destroy();
+  charts.cred = new Chart(c2, {
+    type: 'bar',
+    data: {
+      labels: labels4,
+      datasets: [
+        { label:'Valor Vendido', data: s.credVendido, backgroundColor:'#2D1DBB', borderRadius:4 },
+        { label:'Valor Recebido', data: s.credPago, backgroundColor:'#B5ADEC', borderRadius:4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position:'bottom', labels:{ font:{size:10}, color:'#222', boxWidth:11 } } },
+      scales: {
+        y: { ticks:{ callback:v=>'R$'+(v/1000).toFixed(0)+'k', font:{size:10} }, grid:{ color:'#F2F1FB' } },
+        x: { ticks:{ font:{size:10} }, grid:{ display:false } }
+      }
+    }
+  });
+
+  // Chart 3: Recorrente
+  const c3 = document.getElementById('ch-rec').getContext('2d');
+  if (charts.rec) charts.rec.destroy();
+  charts.rec = new Chart(c3, {
+    type: 'bar',
+    data: {
+      labels: labels4,
+      datasets: [
+        { label:'Valor Vendido', data: s.recVendido, backgroundColor:'#16A34A', borderRadius:4, yAxisID:'y' },
+        { label:'% 1ª Mensalidade OK', data: s.recPct, backgroundColor:'#86EFAC', borderRadius:4, yAxisID:'y2' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position:'bottom', labels:{ font:{size:10}, color:'#222', boxWidth:11 } } },
+      scales: {
+        y:  { position:'left',  ticks:{ callback:v=>'R$'+(v/1000).toFixed(0)+'k', font:{size:10} }, grid:{ color:'#F2F1FB' } },
+        y2: { position:'right', min:0, max:100, ticks:{ callback:v=>v+'%', font:{size:10} }, grid:{ display:false } },
+        x:  { ticks:{ font:{size:10} }, grid:{ display:false } }
+      }
+    }
+  });
+}
+
+function renderRanking(ranking) {
+  const clsMap = ['rp1','rp2','rp3'];
+  const posIcon = ['1º','2º','3º','4º'];
+  if (!ranking.length) {
+    document.getElementById('ranking').innerHTML = '<p style="color:#9CA3AF;font-size:13px">Sem pontuações ainda.</p>';
+    return;
+  }
+  document.getElementById('ranking').innerHTML = ranking.map((r,i) => `
+    <div class="rank-card">
+      <div class="rank-pos ${clsMap[i]||'rpn'}">${posIcon[i]||`${i+1}º`}</div>
+      <div class="rank-info">
+        <div class="rank-name">${r.consultora}</div>
+        <div class="rank-sub">${r.vendas} venda(s) · ${fmtBRL(r.faturamento)}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="rank-pts">${Math.round(r.pontos)}</div>
+        <div class="rank-pts-label">pontos</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTable(vendas) {
+  document.getElementById('t-count').textContent = `${vendas.length} venda(s)`;
+  if (!vendas.length) {
+    document.getElementById('tbody').innerHTML =
+      `<tr><td colspan="23"><div class="empty">📭 Nenhuma venda lançada neste mês ainda.</div></td></tr>`;
+    return;
+  }
+  const statusCls = s => s==='Confirmada'?'s-conf':s==='Em risco'?'s-risco':'s-canc';
+  const pagCls    = p => p==='Crédito'?'pag-cred':'pag-rec';
+
+  document.getElementById('tbody').innerHTML = vendas.map(v => `
+    <tr>
+      <td>${v.data||'—'}</td>
+      <td><strong>${v.consultora||'—'}</strong></td>
+      <td>${v.nomeAluno||'—'}</td>
+      <td>${v.planoVendido||'—'}</td>
+      <td>${v.duracao||'—'}</td>
+      <td><strong>${fmtBRL(v.valorVenda)}</strong></td>
+      <td>${fmtBRL(v.valorPago)}</td>
+      <td><span class="${pagCls(v.formaPagamento)}">${v.formaPagamento||'—'}</span></td>
+      <td><span class="sit-badge">${v.situacao||'—'}</span></td>
+      <td><span class="sbadge ${statusCls(v.status)}">${v.status||'—'}</span></td>
+      <td>${chk(v.contratoAssinado)}</td>
+      <td>${chk(v.pagamento)}</td>
+      <td>${chk(v.agendouLink)}</td>
+      <td>${chk(v.cadastroCompleto)}</td>
+      <td>${chk(v.autorizacaoCobranca)}</td>
+      <td>${chk(v.msgMatricula)}</td>
+      <td>${chk(v.boasVindas)}</td>
+      <td>${chk(v.negFinanceira)}</td>
+      <td>${chk(v.descontoTabela)}</td>
+      <td>${chk(v.negFidelidade)}</td>
+      <td>${chk(v.feriasEstendidas)}</td>
+      <td><span class="pts">${v.ptsMax||'—'}</span></td>
+      <td><span class="pts">${v.ptsAtingida||'—'}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ── MAIN LOAD ────────────────────────────────────
+async function load() {
+  const month = document.getElementById('monthSel').value;
+  const gid = GIDS[month];
+
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('error-bar').style.display = 'none';
+
+  try {
+    // Try to load config for commission rates
+    try {
+      const cfgCsv = await fetchCSV(GIDS.configuracoes);
+      tryParseConfig(parseCSV(cfgCsv));
+    } catch(_) { /* use defaults */ }
+
+    const csv = await fetchCSV(gid);
+    const rows = parseCSV(csv);
+    const vendas = parseVendas(rows);
+    const stats = calcStats(vendas);
+
+    renderCards(stats);
+    renderProgress(stats);
+    renderCharts(stats);
+    renderRanking(stats.ranking);
+    renderTable(vendas);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    const eb = document.getElementById('error-bar');
+    eb.textContent = `Erro ao carregar dados: ${err.message}`;
+    eb.style.display = 'block';
+    renderTable([]);
+  }
+
+  // Reset countdown
+  countdownSec = REFRESH_SEC;
+}
+
+// ── CLOCK & COUNTDOWN ────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+function updateCountdown() {
+  countdownSec--;
+  if (countdownSec <= 0) {
+    load();
+    return;
+  }
+  const m = Math.floor(countdownSec / 60);
+  const s = countdownSec % 60;
+  document.getElementById('refresh-label').textContent =
+    `Atualiza em ${m}:${String(s).padStart(2,'0')}`;
+  document.getElementById('refresh-bar').style.width =
+    (countdownSec / REFRESH_SEC * 100) + '%';
+}
+
+// ── AUTO SELECT CURRENT MONTH ────────────────────
+function autoSelectMonth() {
+  const m = new Date().getMonth(); // 0=Jan ... 6=Jul
+  const map = {6:'julho',7:'agosto',8:'setembro',9:'outubro',10:'novembro',11:'dezembro'};
+  const sel = map[m];
+  if (sel) document.getElementById('monthSel').value = sel;
+}
+
+// ── INIT ─────────────────────────────────────────
+autoSelectMonth();
+document.getElementById('monthSel').addEventListener('change', load);
+updateClock();
+setInterval(updateClock, 1000);
+setInterval(updateCountdown, 1000);
+load();
+</script>
+</body>
+</html>
